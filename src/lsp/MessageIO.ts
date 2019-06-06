@@ -1,50 +1,52 @@
 import { AbstractMessageReader, MessageReader, DataCallback } from "vscode-jsonrpc/lib/messageReader";
 import { EventEmitter } from "events";
-import * as WebSocket  from 'ws';
+import * as WebSocket from 'ws';
+import * as vscode  from 'vscode';
 import MessageBuffer from "./MessageBuffer";
 import logger from "../loggger";
 import { AbstractMessageWriter, MessageWriter } from "vscode-jsonrpc/lib/messageWriter";
 import { Message } from "vscode-jsonrpc";
+import { print } from "util";
 
 export class MessageIO extends EventEmitter {
-	
-	private socket: WebSocket = null; 
+
+	private socket: WebSocket = null;
 	private url: string = "";
-	
+
 	constructor(url: string) {
 		super();
 		this.url = url;
 	}
-	
+
 	public send_message(message: string) {
 		if (this.socket) {
 			this.socket.send(message);
 		}
 		logger.log("[client]", message);
 	}
-	
+
 	protected on_message(chunk: WebSocket.Data) {
 		let message = chunk.toString();
 		this.emit('data', message);
 		logger.log("[server]", message);
 	}
-	
-	connect_to_language_server():Promise<void> {
+
+	connect_to_language_server(): Promise<void> {
 		return new Promise((resolve, reject) => {
 			this.socket = null;
 			const ws = new WebSocket(this.url);
-			ws.on('open', ()=>{ this.on_connected(ws); resolve(); });
+			ws.on('open', () => { this.on_connected(ws); resolve(); });
 			ws.on('message', this.on_message.bind(this));
 			ws.on('error', this.on_disconnected.bind(this));
 			ws.on('close', this.on_disconnected.bind(this));
 		});
 	}
-	
+
 	private on_connected(socket: WebSocket) {
 		this.socket = socket;
 		this.emit("connected");
 	}
-	
+
 	private on_disconnected() {
 		this.socket = null;
 		this.emit('disconnected');
@@ -163,6 +165,10 @@ export class MessageIOWriter extends AbstractMessageWriter implements MessageWri
 	}
 
 	public write(msg: Message): void {
+		const editor = vscode.window.activeTextEditor;
+		// msg["params"]["cursor_position_line"] = editor.selection.active.line
+		// msg["params"]["cursor_position_character"] = editor.selection.active.character
+
 		let json = JSON.stringify(msg);
 		let contentLength = Buffer.byteLength(json, this.encoding);
 
