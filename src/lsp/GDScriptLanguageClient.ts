@@ -35,12 +35,12 @@ const serverOptions: ServerOptions = () => {
 	});
 };
 
-export default class GDScriptLanguageClient extends LanguageClient {
+export default class GDScriptLanguageClient extends LanguageClient {	
 	constructor() {
 		super(`GDScriptLanguageClient`, serverOptions, getClientOptions());
 		io.on('disconnected', this.on_disconnected.bind(this));
 	}
-
+	
 	private on_disconnected() {
 		vscode.window.showErrorMessage(`Failed connect to GDScript Language Server`, 'Retry', 'Close').then(item=>{
 			if (item == 'Retry') {
