@@ -2,19 +2,14 @@ import * as vscode from 'vscode'
 import * as path from "path";
 import * as parser from "../parser"
 import * as extension from "../extension"
+import * as fs from "fs"
 
 export const id = "showDoc"
 export function command() {
     let symbolName = vscode.window.activeTextEditor ? scanDocument(vscode.window.activeTextEditor) : null
 
     if (symbolName == null || extension.DocContent.docItems.length == 0) {
-        vscode.window.showQuickPick(extension.DocContent.docItems).then(selection => {
-            if (!selection) {
-                return;
-            }
-
-            findDoc(selection.label)
-        });
+        showDocItems()
     } else if (vscode.window.activeTextEditor &&
         vscode.window.activeTextEditor.document &&
         (
@@ -22,6 +17,16 @@ export function command() {
         )) {
         findDoc(symbolName)
     }
+}
+
+function showDocItems() {
+    vscode.window.showQuickPick(extension.DocContent.docItems).then(selection => {
+        if (!selection) {
+            return;
+        }
+
+        findDoc(selection.label)
+    });
 }
 
 function scanDocument(textEditor: vscode.TextEditor) {
@@ -42,11 +47,17 @@ function findDoc(symbolName: string, textEditor?: vscode.TextEditor) {
         throw new Error('No open document')
     }
 
-    if (vscode.workspace.getConfiguration("godot_tools").get("data_directory")) {
-        let docLocation = vscode.Uri.file(path.join(vscode.workspace.getConfiguration("godot_tools").get("data_directory"), 'documentation', `README.md`))
-        return vscode.commands.executeCommand('markdown.showPreviewToSide', docLocation)
-    }
-    else {
-        throw new Error('Not able to fecth document directory')
+    if (extension.DocContent.dataDirectory) {
+        symbolName = symbolName.replace(' ', '')
+        let docPath = path.join(extension.DocContent.dataDirectory, `${symbolName}.md`)
+        if (fs.existsSync(docPath)) {
+            let docUri = vscode.Uri.file(docPath)
+            return vscode.commands.executeCommand('markdown.showPreviewToSide', docUri)
+        } else if (extension.DocContent.builtIns.has(symbolName)) {
+            let docUri = vscode.Uri.file(path.join(extension.DocContent.dataDirectory, `@GDScript.md`))
+            return vscode.commands.executeCommand('markdown.showPreviewToSide', docUri)
+        } else {
+            showDocItems()
+        }
     }
 }

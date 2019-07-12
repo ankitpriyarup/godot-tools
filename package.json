@@ -54,11 +54,6 @@
 					"type": "number",
 					"default": 6008,
 					"description": "The websocket server port of the GDScript Langugae Protocol server"
-				},
-				"godot_tools.data_directory": {
-					"type": "string",
-					"default": "",
-					"description": "Documentation directory path"
 				}
 			}
 		},

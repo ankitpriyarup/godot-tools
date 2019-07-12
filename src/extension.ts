@@ -8,23 +8,35 @@ let client: GDScriptLanguageClient = null;
 const commandPrefix = "cmd"
 
 export class DocContent {
-	static docItems: vscode.QuickPickItem[] = [];
+	static docItems: vscode.QuickPickItem[] = []
+	static builtIns = new Set()
+	static dataDirectory
 
-	constructor() {
-		let indexLocation = path.join(vscode.workspace.getConfiguration("godot_tools").get("data_directory"), 'documentation', `index.json`)
-		var index = require(indexLocation)
+	constructor(dataPath : string) {
+		DocContent.dataDirectory = path.join(dataPath, 'godot', 'doc')
+		let indexLocation = path.join(dataPath, 'godot', 'doc', `index.json`)
 
-		for (let i = 0; i < index.size; i++) {
-			DocContent.docItems.push({
-				label: index.contents[i].label,
-				description: index.contents[i].detail
-			})
-		}
+		require('fs').readFile(indexLocation, 'utf8', function (err, data) {
+			if (err) {
+				throw err
+			}
+
+			var index = JSON.parse(data);
+			for (let i = 0; i < index.size; i++) {
+				DocContent.docItems.push({
+					label: index.contents[i].label,
+					description: index.contents[i].detail
+				})
+			}
+			for (let i = 0; i < index.builtinSize; i++) {
+				DocContent.builtIns.add(index.builtin[i])
+			}
+		});
+
 	}
 }
 
 export function activate(context: ExtensionContext) {
-	new DocContent();
 	client = new GDScriptLanguageClient();
 	context.subscriptions.push(client.start(), vscode.commands.registerCommand(`${commandPrefix}.${showDoc.id}`, showDoc.command));
 }
