@@ -7,11 +7,13 @@ import logger from "../loggger";
 import { AbstractMessageWriter, MessageWriter } from "vscode-jsonrpc/lib/messageWriter";
 import { Message } from "vscode-jsonrpc";
 import * as extension from "../extension"
+import * as showDoc from '../commands/showDoc'
 
 export class MessageIO extends EventEmitter {
 
 	private socket: WebSocket = null;
 	private url: string = "";
+	public wasDefinitionRequest: boolean = false;
 
 	constructor(url: string) {
 		super();
@@ -21,6 +23,15 @@ export class MessageIO extends EventEmitter {
 	public send_message(message: string) {
 		if (this.socket) {
 			this.socket.send(message);
+		}
+		if (message.search('{') != -1)
+		{
+			var json = JSON.parse(message)
+			if (json && json.params.position) {
+				let pos = vscode.window.activeTextEditor.selection.start
+				this.wasDefinitionRequest =  (json.method == 'textDocument/definition' &&
+					json.params.position.line == pos.line && json.params.position.character == pos.character)
+			}
 		}
 		logger.log("[client]", message);
 	}
@@ -120,10 +131,15 @@ export class MessageIOReader extends AbstractMessageReader implements MessageRea
 			this.clearPartialMessageTimer();
 			this.nextMessageLength = -1;
 			this.messageToken++;
+
 			var json = JSON.parse(msg);
 			if (json && json.result && json.result.capabilities) {
 				let dataDirectory = json.result.capabilities.dataDirectory
 				new extension.DocContent(dataDirectory)
+			}
+
+			if (this.io.wasDefinitionRequest && json.result && !json.result[0]) {
+				showDoc.command(false)
 			}
 			this.callback(json);
 		}

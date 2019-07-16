@@ -7,7 +7,6 @@ export function parse(text : string, pos : number) {
     while ((matched = re.exec(str)) != null) {
         if (matched.index <= pos && pos <= re.lastIndex) {
             moduleName = matched[0];
-            console.log('>>> ' + moduleName)
             break;
         }
     }
